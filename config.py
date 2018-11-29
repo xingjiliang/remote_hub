@@ -1,7 +1,10 @@
 origin_dataset_dir_path = "origin_dataset/"
 dataset_dir_path = "dataset/"
-dataset_file_name = "bj.tsv"
-train_data_file_name = ""
+model_graph_path = "model_graphs/"
+model_path = "models/"
+mytest_dataset_file_path = origin_dataset_dir_path + "1.tsv"
+mytest_train_data_file_path = dataset_dir_path
+mytest_test_data_file_path = dataset_dir_path
 
 holidays = [
     '2017-04-02',
