@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import pandas as pd
 import numpy as np
 import datetime
@@ -5,8 +7,9 @@ import datetime
 import config
 
 
-def main(city_id):
-    origin_dataset_file_path = config.origin_dataset_dir_path + str(city_id) + ".tsv"
+def generate_data(tsv_file, save_as_file=True):
+    city_id = int(tsv_file.split(sep='.')[0])
+    origin_dataset_file_path = config.origin_dataset_dir_path + tsv_file
     holidays = config.holidays
     end_of_holidays = config.end_of_holidays
     weekend_weekdays = config.weekend_weekdays
@@ -47,7 +50,7 @@ def main(city_id):
     # day_grained_data = np.array(day_grained_dataframe.values)
     # np.save(config.dataset_dir_path + str(city_id) + "_day_grained_data.npy", day_grained_data)
 
-    #将数据处理为可输入模型的格式
+    # 将数据处理为可输入模型的格式
     may_be_predict_date = pd.to_datetime(config.dateset_start_date) + datetime.timedelta(days=7)
     data = []
     for i in range(len(hour_grained_dataframe)):
@@ -57,15 +60,45 @@ def main(city_id):
             day_grained_8_days_data = []
             for delta_days in range(7, 0, -1):
                 day_grained_8_days_data.append(day_grained_dataframe.loc[(hour_grained_dataframe.iloc[i].datetime - datetime.timedelta(days=delta_days)).strftime('%Y-%m-%d')].values)
+            day_grained_8_days_data.append(day_grained_dataframe.loc[hour_grained_dataframe.iloc[i].datetime.strftime('%Y-%m-%d')].values)
             day_grained_8_days_data = np.array(day_grained_8_days_data)
-            data.append([day_grained_8_days_data[:-1, 1:],
+            data.append([hour_grained_dataframe.iloc[i].values[0],
+                        day_grained_8_days_data[:-1, 1:],
                         day_grained_8_days_data[-1, 1:-1],
-                        hour_grained_dataframe.values,
+                        hour_grained_dataframe.iloc[i - 23:i+1].values[:, 1:],
                         day_grained_8_days_data[-1, -1]]
                         )
     data = np.array(data)
-    np.save(config.dataset_dir_path + str(city_id) + "_data.npy", data)
+    if save_as_file:
+        np.save(config.dataset_dir_path + str(city_id) + "_data.npy", data)
+    return data
+
+
+def generate_train_and_test_data(
+        data,
+        train_data_start_date,
+        train_data_end_date,
+        test_data_start_date,
+        test_data_end_date,
+        save_as_file=True,
+        city_id=0
+):
+    train_data_start_index = np.argwhere(data[:, 0] == pd.to_datetime(train_data_start_date))[0, 0]
+    train_data_end_index = np.argwhere(data[:, 0] == pd.to_datetime(train_data_end_date))[0, 0]
+    test_data_start_index = np.argwhere(data[:, 0] == pd.to_datetime(test_data_start_date))[0, 0]
+    test_data_end_index = np.argwhere(data[:, 0] == pd.to_datetime(test_data_end_date))[0, 0]
+    train_data = data[train_data_start_index:train_data_end_index]
+    test_data = data[test_data_start_index:test_data_end_index]
+    if save_as_file:
+        np.save(config.dataset_dir_path + str(city_id) + "_train_data_%s_%s.npy" % (train_data_start_date, train_data_end_date), train_data)
+        np.save(config.dataset_dir_path + str(city_id) + "_test_data_%s_%s.npy" % (test_data_start_date, test_data_end_date), test_data)
+    return train_data, test_data
 
 
 if __name__ == '__main__':
-    main(1)
+    generate_train_and_test_data(data=generate_data("1.tsv"),
+                                 train_data_start_date='2018-03-19',
+                                 train_data_end_date='2018-08-16',
+                                 test_data_start_date='2018-08-16',
+                                 test_data_end_date='2018-09-21',
+                                 city_id=1)

@@ -106,17 +106,35 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 hour_grained_last_time_outputs = tf.nn.dropout(hour_grained_last_time_outputs, keep_prob=settings.keep_prob)
 
-        batch_results = tf.concat([reduced_day_grained_output_h, hour_grained_last_time_outputs], 1)
-        self.mlr_params = tf.get_variable(name="mlr_params", shape=[self.day_grained_cell_size + self.hour_grained_cell_size, 1])
+        self.prediction_day_day_of_week = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_day_of_week')
+        self.prediction_day_holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_holidays_distance')
+        self.prediction_day_end_of_holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_end_of_holidays_distance')
+        self.prediction_day_is_weekend_weekday = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_is_weekend_weekday')
+
+        # TODO:这里的全连接层没有隐层,无法刻画当天与先前数据的关系.
+        prediction_day_inputs = tf.concat(
+            values=[
+                tf.nn.embedding_lookup(self.day_of_week_embedding, self.prediction_day_day_of_week).reshape(-1, settings.day_of_week_embedding_size),
+                tf.nn.embedding_lookup(self.holidays_distance_embedding, self.prediction_day_holidays_distance).reshape(-1, settings.holidays_distance_embedding_size),
+                tf.nn.embedding_lookup(self.end_of_holidays_distance_embedding, self.prediction_day_end_of_holidays_distance).reshape(-1, settings.end_of_holidays_distance_embedding_size),
+                tf.nn.embedding_lookup(self.is_weekend_weekday_embedding, self.prediction_day_is_weekend_weekday).reshape(-1, settings.is_weekend_weekday_embedding_size)
+            ],
+            axis=1
+        )
+
+        batch_results = tf.concat([reduced_day_grained_output_h, hour_grained_last_time_outputs, prediction_day_inputs], 1)
+        self.mlr_params = tf.get_variable(name="mlr_params", shape=[self.day_grained_cell_size + self.hour_grained_cell_size + settings.day_of_week_embedding_size + settings.holidays_distance_embedding_size + settings.end_of_holidays_distance_embedding_size + settings.is_weekend_weekday_embedding_size, 1])
         self.mlr_bias_d = tf.get_variable(name="mlr_bias_d", shape=[1])
         self._Y = tf.matmul(batch_results, self.mlr_params) + self.mlr_bias_d
-        self.Y = tf.placeholder(name="", shape=[None, 1])
-        self.total_loss = tf.losses.mean_squared_error(self.Y, self._Y)
+        self.Y = tf.placeholder(name="true_value", shape=[None, 1])
+        self.empirical_loss = tf.losses.mean_squared_error(self.Y, self._Y)
         # tf.get_collection('l2_loss')
         # for v in tf.trainable_variables():
         #     if v is word_embedding:
         #         continue
         #     tf.add_to_collection('l2_loss', v)
-        #这里的l2_lambda应由训练settings设置
+        # 这里的l2_lambda应由训练settings设置
         # self.l2_loss = tf.contrib.layers.apply_regularization(regularizer=tf.contrib.layers.l2_regularizer(settings.l2_lambda),
         #                                                       weights_list=tf.get_collection('l2_loss'))
+        # 后续会加入结构损失
+        self.final_loss = self.empirical_loss
