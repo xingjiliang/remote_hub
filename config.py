@@ -2,6 +2,7 @@ origin_dataset_dir_path = "origin_dataset/"
 dataset_dir_path = "dataset/"
 model_graph_path = "model_graphs/"
 model_path = "models/"
+dateset_start_date = '2017-03-03'
 mytest_dataset_file_path = origin_dataset_dir_path + "1.tsv"
 mytest_train_data_file_path = dataset_dir_path
 mytest_test_data_file_path = dataset_dir_path

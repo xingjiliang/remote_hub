@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import datetime
+
 import config
 
 
@@ -9,15 +11,15 @@ def main(city_id):
     end_of_holidays = config.end_of_holidays
     weekend_weekdays = config.weekend_weekdays
 
-    df = pd.read_csv(origin_dataset_file_path, names=["city_id", "datetime", "count"], sep="\t")
-
     # 预处理小时粒度的数据
+    df = pd.read_csv(origin_dataset_file_path, names=["city_id", "datetime", "count"], sep="\t")
     df['datetime'] = df.datetime.apply(lambda datetime: pd.to_datetime(datetime[0:13]))
     df = df[['datetime', 'count']].groupby('datetime').sum()
     df['datetime'] = df.index
     df['hour'] = df.datetime.apply(lambda datetime: datetime.hour)
-    hour_grained_data = np.array(df[["datetime", "hour", "count"]].values)
-    np.save(config.dataset_dir_path + str(city_id) + "_hour_grained_data.npy", hour_grained_data)
+    hour_grained_dataframe = df[["datetime", "hour", "count"]]
+    # hour_grained_data = np.array(hour_grained_dataframe.values)
+    # np.save(config.dataset_dir_path + str(city_id) + "_hour_grained_data.npy", hour_grained_data)
 
     # 预处理日粒度的数据
     df = pd.read_csv(origin_dataset_file_path, names=["city_id", "datetime", "count"], sep="\t")
@@ -41,8 +43,28 @@ def main(city_id):
             if pd.to_datetime(weekend_weekday) == df.iloc[i,1]:
                 df.iloc[i, 5] = 1
     df.holidays_distance = df.holidays_distance + 7
-    day_grained_data = np.array(df[['datetime', 'day_of_week', 'holidays_distance', 'end_of_holidays_distance', 'is_weekend_weekday', 'count']].values)
-    np.save(config.dataset_dir_path + str(city_id) + "_day_grained_data.npy", day_grained_data)
+    day_grained_dataframe = df[['datetime', 'day_of_week', 'holidays_distance', 'end_of_holidays_distance', 'is_weekend_weekday', 'count']]
+    # day_grained_data = np.array(day_grained_dataframe.values)
+    # np.save(config.dataset_dir_path + str(city_id) + "_day_grained_data.npy", day_grained_data)
+
+    #将数据处理为可输入模型的格式
+    may_be_predict_date = pd.to_datetime(config.dateset_start_date) + datetime.timedelta(days=7)
+    data = []
+    for i in range(len(hour_grained_dataframe)):
+        if hour_grained_dataframe.iloc[i].datetime < may_be_predict_date:
+            continue
+        else:
+            day_grained_8_days_data = []
+            for delta_days in range(7, 0, -1):
+                day_grained_8_days_data.append(day_grained_dataframe.loc[(hour_grained_dataframe.iloc[i].datetime - datetime.timedelta(days=delta_days)).strftime('%Y-%m-%d')].values)
+            day_grained_8_days_data = np.array(day_grained_8_days_data)
+            data.append([day_grained_8_days_data[:-1, 1:],
+                        day_grained_8_days_data[-1, 1:-1],
+                        hour_grained_dataframe.values,
+                        day_grained_8_days_data[-1, -1]]
+                        )
+    data = np.array(data)
+    np.save(config.dataset_dir_path + str(city_id) + "_data.npy", data)
 
 
 if __name__ == '__main__':
