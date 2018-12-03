@@ -1,10 +1,19 @@
 import tensorflow as tf
 import numpy as np
 
+FLAGS = tf.app.flags.FLAGS
+# tf.app.flags.DEFINE_float('keep_prob', 0.5, 'keep prob')
+# tf.app.flags.DEFINE_integer('full_connection_layer_nums', 1, 'full connection layer nums')
+# tf.app.flags.DEFINE_string('model_WTF', 'origin', 'zero')
+# tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
+# tf.app.flags.DEFINE_integer('day_grained_sequence_length', 7, 'day_grained_sequence_length')
+# 除tf.app.run() main()函数可调用,在脚本调试中也应当可调用
+
+
 class ModelSettings:
     def __init__(self):
         self.keep_prob = 0.5
-        self.num_layers = 1
+        self.full_connection_layer_nums = 1
         self.model_WTF = "origin"
         self.l2_lambda = 1e-5
         self.day_grained_sequence_length = 7
@@ -22,21 +31,24 @@ class ModelSettings:
         self.hour_per_day_size = 24
         self.hour_per_day_embedding_size = 5
 
+
 class Model:
     def __init__(self, is_training=False):
         settings = ModelSettings()
+        self.actual_batch_size_scalar = tf.placeholder(dtype=tf.int32, shape=[1], name='actual_batch_size_scalar')
+        actual_batch_size = self.actual_batch_size_scalar[0]
 
         with tf.variable_scope("day_grained_processing_frame"):
-            self.day_of_week = tf.placeholder(dtype=tf.int8, shape=[None, settings.day_grained_sequence_length], name='day_of_week')
-            self.holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, settings.day_grained_sequence_length], name='holidays_distance')
-            self.end_of_holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, settings.day_grained_sequence_length], name='end_of_holidays_distance')
-            self.is_weekend_weekday = tf.placeholder(dtype=tf.int8, shape=[None, settings.day_grained_sequence_length], name='is_weekend_weekday')
-            self.impression_per_day = tf.placeholder(dtype=tf.int64, shape=[None, settings.day_grained_sequence_length], name='impression_per_day')
+            self.day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, settings.day_grained_sequence_length], name='day_of_week')
+            self.holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, settings.day_grained_sequence_length], name='holidays_distance')
+            self.end_of_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, settings.day_grained_sequence_length], name='end_of_holidays_distance')
+            self.is_weekend_weekday = tf.placeholder(dtype=tf.int32, shape=[None, settings.day_grained_sequence_length], name='is_weekend_weekday')
+            self.impression_per_day = tf.placeholder(dtype=tf.float64, shape=[None, settings.day_grained_sequence_length, 1], name='impression_per_day')
 
-            self.day_of_week_embedding = tf.get_variable(name='day_of_week_embedding', shape=[settings.day_of_week_size, settings.day_of_week_embedding_size])
-            self.holidays_distance_embedding = tf.get_variable(name='holidays_distance_embedding', shape=[settings.holidays_distance_size, settings.holidays_distance_embedding_size])
-            self.end_of_holidays_distance_embedding = tf.get_variable(name='end_of_holidays_distance_embedding', shape=[settings.end_of_holidays_distance_size, settings.end_of_holidays_distance_embedding_size])
-            self.is_weekend_weekday_embedding = tf.get_variable(name='is_weekend_weekday_embedding', shape=[settings.is_weekend_weekday_size, settings.is_weekend_weekday_embedding_size])
+            self.day_of_week_embedding = tf.get_variable(name='day_of_week_embedding', shape=[settings.day_of_week_size, settings.day_of_week_embedding_size], dtype='float64')
+            self.holidays_distance_embedding = tf.get_variable(name='holidays_distance_embedding', shape=[settings.holidays_distance_size, settings.holidays_distance_embedding_size], dtype='float64')
+            self.end_of_holidays_distance_embedding = tf.get_variable(name='end_of_holidays_distance_embedding', shape=[settings.end_of_holidays_distance_size, settings.end_of_holidays_distance_embedding_size], dtype='float64')
+            self.is_weekend_weekday_embedding = tf.get_variable(name='is_weekend_weekday_embedding', shape=[settings.is_weekend_weekday_size, settings.is_weekend_weekday_embedding_size], dtype='float64')
             day_grained_inputs = tf.concat(
                 values=[
                 tf.nn.embedding_lookup(self.day_of_week_embedding, self.day_of_week),
@@ -53,8 +65,8 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 day_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_forward_lstm_cell, input_keep_prob=settings.keep_prob)
                 day_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_backward_lstm_cell, input_keep_prob=settings.keep_prob)
-            self.day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(settings.batch_size, tf.float32)
-            self.day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(settings.batch_size, tf.float32)
+            self.day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
+            self.day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 day_grained_outputs, day_grained_outputs_state = tf.nn.bidirectional_dynamic_rnn(day_grained_forward_lstm_cell,
                                                                          day_grained_backward_lstm_cell,
@@ -73,11 +85,11 @@ class Model:
             # LSTM,h=output_gate.*tanh(c)
             # day_grained_output_m = tf.tanh(reduced_day_grained_output_h)
 
-
         with tf.variable_scope("hour_grained_processing_frame"):
-            self.hour_per_day = tf.placeholder(dtype=tf.int8, shape=[None, settings.hour_grained_sequence_length], name='hour_per_day')
-            self.impression_per_hour = tf.placeholder(dtype=tf.int64, shape=[None, settings.hour_grained_sequence_length], name='impression_per_hour')
-            self.hour_per_day_embedding = tf.get_variable(name='hour_per_day_embedding', shape=[settings.hour_per_day_size, settings.hour_per_day_embedding_size])
+            self.hour_per_day = tf.placeholder(dtype=tf.int32, shape=[None, settings.hour_grained_sequence_length], name='hour_per_day')
+            self.impression_per_hour = tf.placeholder(dtype=tf.float64, shape=[None, settings.hour_grained_sequence_length, 1], name='impression_per_hour')
+
+            self.hour_per_day_embedding = tf.get_variable(name='hour_per_day_embedding', shape=[settings.hour_per_day_size, settings.hour_per_day_embedding_size], dtype='float64')
             hour_grained_inputs = tf.concat(
                 values=[
                 tf.nn.embedding_lookup(self.hour_per_day_embedding, self.hour_per_day),
@@ -91,8 +103,8 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 hour_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_forward_lstm_cell, input_keep_prob=settings.keep_prob)
                 # hour_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_backward_lstm_cell, input_keep_prob=settings.keep_prob)
-            self.hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(settings.batch_size, tf.float32)
-            # self.hour_grained_initial_state_backward = hour_grained_backward_lstm_cell.zero_state(settings.batch_size, tf.float32)
+            self.hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
+            # self.hour_grained_initial_state_backward = hour_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 hour_grained_outputs, hour_grained_outputs_state = tf.nn.dynamic_rnn(hour_grained_forward_lstm_cell, hour_grained_inputs,
                                                                          sequence_length=self.hour_grained_sequence_length,
@@ -106,10 +118,10 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 hour_grained_last_time_outputs = tf.nn.dropout(hour_grained_last_time_outputs, keep_prob=settings.keep_prob)
 
-        self.prediction_day_day_of_week = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_day_of_week')
-        self.prediction_day_holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_holidays_distance')
-        self.prediction_day_end_of_holidays_distance = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_end_of_holidays_distance')
-        self.prediction_day_is_weekend_weekday = tf.placeholder(dtype=tf.int8, shape=[None, 1], name='prediction_day_is_weekend_weekday')
+        self.prediction_day_day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_day_of_week')
+        self.prediction_day_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_holidays_distance')
+        self.prediction_day_end_of_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_end_of_holidays_distance')
+        self.prediction_day_is_weekend_weekday = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_is_weekend_weekday')
 
         # TODO:这里的全连接层没有隐层,无法刻画当天与先前数据的关系.
         prediction_day_inputs = tf.concat(
@@ -123,8 +135,8 @@ class Model:
         )
 
         batch_results = tf.concat([reduced_day_grained_output_h, hour_grained_last_time_outputs, prediction_day_inputs], 1)
-        self.mlr_params = tf.get_variable(name="mlr_params", shape=[self.day_grained_cell_size + self.hour_grained_cell_size + settings.day_of_week_embedding_size + settings.holidays_distance_embedding_size + settings.end_of_holidays_distance_embedding_size + settings.is_weekend_weekday_embedding_size, 1])
-        self.mlr_bias_d = tf.get_variable(name="mlr_bias_d", shape=[1])
+        self.mlr_params = tf.get_variable(name="mlr_params", shape=[self.day_grained_cell_size + self.hour_grained_cell_size + settings.day_of_week_embedding_size + settings.holidays_distance_embedding_size + settings.end_of_holidays_distance_embedding_size + settings.is_weekend_weekday_embedding_size, 1], dtype='float64')
+        self.mlr_bias_d = tf.get_variable(name="mlr_bias_d", shape=[1], dtype='float64')
         self._Y = tf.matmul(batch_results, self.mlr_params) + self.mlr_bias_d
         self.Y = tf.placeholder(name="true_value", shape=[None, 1])
         self.empirical_loss = tf.losses.mean_squared_error(self.Y, self._Y)

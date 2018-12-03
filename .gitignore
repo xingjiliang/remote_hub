@@ -1,6 +1,6 @@
 .idea
 dataset
 origin_dataset
-doc
+docs
 __pycache__
 *.log

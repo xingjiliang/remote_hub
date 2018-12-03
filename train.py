@@ -7,42 +7,37 @@ from model_graphs import model
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
-tf.app.flags.DEFINE_string('train_data_start_date', '2018-03-19', 'train data start date')
-tf.app.flags.DEFINE_string('train_data_end_date', '2018-08-16', 'train data end date')
+tf.app.flags.DEFINE_string('train_start_date', '2018-03-19', 'train start date')
+tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
 # tf.app.flags.DEFINE_float('keep_prob', 0.5, 'l2 lambda')
 # tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
 tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_integer('num_epochs', 100, 'epoch times')
-tf.app.flags.DEFINE_integer('model_save_path', config.model_path, 'model params save path')
 
 
 class TrainSettings:
     def __init__(
             self,
             city_id,
-            train_start_data,
-            train_end_data,
+            train_start_date,
+            train_end_date,
             batch_size,
-            num_epochs,
-            model_save_path
+            num_epochs
     ):
-        # 因为样本总量较小,为每一个小时粒度生成一个样本.
-        if len(train_start_data) == 0 or len(train_end_data) == 0:
-            print('需要输入训练集开始日期和结束日期')
-            exit(0)
-        self.train_data_file_path = config.dataset_dir_path + str(city_id) + "_train_data_%s_%s.npy" % (train_start_data, train_end_data)
+        self.city_id = city_id
+        self.train_start_date = train_start_date
+        self.train_end_date = train_end_date
+        self.train_data_file_path = config.dataset_dir_path + str(city_id) + "_train_data_%s_%s.npy" % (train_start_date, train_end_date)
         self.batch_size = batch_size
         self.num_epochs = num_epochs
-        self.model_save_path = model_save_path
 
 
 def main(args):
     train_settings = TrainSettings(city_id=FLAGS.city_id,
-                                   train_start_data=FLAGS.train_start_date,
+                                   train_start_date=FLAGS.train_start_date,
                                    train_end_date=FLAGS.train_end_date,
                                    batch_size=FLAGS.batch_size,
-                                   num_epochs=FLAGS.num_epochs,
-                                   model_save_path=FLAGS.model_save_path)
+                                   num_epochs=FLAGS.num_epochs)
     train_data = np.load(train_settings.train_data_file_path)
     with tf.Graph().as_default():
         sess = tf.Session()
@@ -67,7 +62,8 @@ def main(args):
                            prediction_day_is_weekend_weekday_train_batch,
                            hour_per_day_train_batch,
                            impression_per_hour_train_batch,
-                           Y_train_batch):
+                           Y_train_batch,
+                           actual_batch_size):
                 feed_dict = dict()
                 feed_dict[m.day_of_week] = day_of_week_train_batch
                 feed_dict[m.holidays_distance] = holidays_distance_train_batch
@@ -84,6 +80,8 @@ def main(args):
                 feed_dict[m.impression_per_hour] = impression_per_hour_train_batch
 
                 feed_dict[m.Y] = Y_train_batch
+
+                feed_dict[m.actual_batch_size] = actual_batch_size
 
                 temp, step, empirical_loss = sess.run([optimizer_term, global_step, m.empirical_loss], feed_dict=feed_dict)
                 time_string = datetime.datetime.now().strftime('%H:%M:%S')
