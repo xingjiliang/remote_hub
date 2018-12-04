@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
-# tf.app.flags.DEFINE_float('keep_prob', 0.5, 'keep prob')
+tf.app.flags.DEFINE_float('keep_prob', 0.5, 'keep prob')
 # tf.app.flags.DEFINE_integer('full_connection_layer_nums', 1, 'full connection layer nums')
 # tf.app.flags.DEFINE_string('model_WTF', 'origin', 'zero')
 # tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')

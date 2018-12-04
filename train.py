@@ -10,7 +10,6 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
 tf.app.flags.DEFINE_string('train_start_date', '2018-03-19', 'train start date')
 tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
-# tf.app.flags.DEFINE_float('keep_prob', 0.5, 'l2 lambda')
 # tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
 tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_integer('num_epochs', 100, 'epoch times')
@@ -41,7 +40,8 @@ def main(args):
                                    train_start_date=FLAGS.train_start_date,
                                    train_end_date=FLAGS.train_end_date,
                                    batch_size=FLAGS.batch_size,
-                                   num_epochs=FLAGS.num_epochs)
+                                   num_epochs=FLAGS.num_epochs,
+                                   keep_prob=FLAGS.keep_prob)
     train_data = np.load(train_settings.train_data_file_path)
     # if FLAGS.test_when_training:
     #     import test
