@@ -43,9 +43,9 @@ def main(args):
                                    num_epochs=FLAGS.num_epochs,
                                    keep_prob=FLAGS.keep_prob)
     train_data = np.load(train_settings.train_data_file_path)
-    if FLAGS.test_when_training:
-        import test
-        test_data = test.load_test_data(FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date)
+    # if FLAGS.test_when_training:
+    #     import test
+    #     test_data = test.load_test_data(FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date)
     with tf.Graph().as_default():
         sess = tf.Session()
         with sess.as_default():
@@ -58,9 +58,9 @@ def main(args):
             sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver(max_to_keep=None)
 
-            if FLAGS.test_when_training:
+            # if FLAGS.test_when_training:
 
-                pass
+                # pass
                 # todo:产生test_feed_dict
 
             minimum_MSE_loss = 1e10
@@ -123,9 +123,9 @@ def main(args):
                                                          Y_batch.shape[0],
                                                          train_settings.keep_prob)
                     temp, step, final_loss = sess.run([optimizer_term,
-                                                           global_step,
-                                                           m.final_loss],
-                                                          feed_dict=feed_dict)
+                                                       global_step,
+                                                       m.final_loss],
+                                                       feed_dict=feed_dict)
                     time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     if step % 100 == 0:
                         info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
