@@ -126,10 +126,11 @@ def main(args):
                                                            global_step,
                                                            m.final_loss],
                                                           feed_dict=feed_dict)
-                    time_string = datetime.datetime.now().strftime('%H:%M:%S')
+                    time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     if step % 100 == 0:
-                        info = "{}: step {}, empirical_loss {:g}".format(time_string, step, final_loss)
+                        info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
+                        print(optimizer_term)
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
                     # MSE_loss_on_test_data =

@@ -28,6 +28,6 @@ def generate_feed_dict(model,
     feed_dict[model.hour_per_day] = hour_per_day_train_batch
     feed_dict[model.impression_per_hour] = impression_per_hour_train_batch
     feed_dict[model.Y] = Y_train_batch
-    feed_dict[model.actual_batch_size] = actual_batch_size
+    feed_dict[model.actual_batch_size_scalar] = [actual_batch_size]
     feed_dict[model.keep_prob] = keep_prob
     return feed_dict
