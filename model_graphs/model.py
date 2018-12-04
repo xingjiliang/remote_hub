@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_float('keep_prob', 0.5, 'keep prob')
+tf.app.flags.DEFINE_float('keep_prob', 1, 'keep prob')
 # tf.app.flags.DEFINE_integer('full_connection_layer_nums', 1, 'full connection layer nums')
 # tf.app.flags.DEFINE_string('model_WTF', 'origin', 'zero')
 # tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
@@ -29,13 +29,15 @@ class ModelSettings:
         self.hour_grained_cell_size = 20
         self.hour_per_day_size = 24
         self.hour_per_day_embedding_size = 5
+        self.FCN_hidden_layer_size = 50
 
 
 class Model:
     def __init__(self, is_training=False):
         settings = ModelSettings()
-        self.keep_prob = tf.placeholder(dtype=tf.float32, name='keep_prob')
-        self.actual_batch_size = tf.placeholder(dtype=tf.int32, name='actual_batch_size')
+        self.keep_prob = tf.placeholder(dtype=tf.float64, name='keep_prob')
+        self.actual_batch_size_scalar = tf.placeholder(dtype=tf.int32, shape=[1], name='actual_batch_size_scalar')
+        actual_batch_size = self.actual_batch_size_scalar[0]
 
         with tf.variable_scope("day_grained_processing_frame"):
             self.day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, settings.day_grained_sequence_length], name='day_of_week')
@@ -64,8 +66,8 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 day_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
                 day_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_backward_lstm_cell, input_keep_prob=self.keep_prob)
-            day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
-            day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
+            day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
+            day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 self.day_grained_outputs, self.day_grained_outputs_state = tf.nn.bidirectional_dynamic_rnn(day_grained_forward_lstm_cell,
                                                                                                  day_grained_backward_lstm_cell,
@@ -101,7 +103,7 @@ class Model:
             if is_training and settings.keep_prob < 1:
                 hour_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
                 # hour_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_backward_lstm_cell, input_keep_prob=settings.keep_prob)
-            hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
+            hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             # self.hour_grained_initial_state_backward = hour_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 self.hour_grained_outputs, self.hour_grained_outputs_state = tf.nn.dynamic_rnn(hour_grained_forward_lstm_cell,
@@ -131,11 +133,21 @@ class Model:
             ],
             axis=1
         )
-
         self.batch_results = tf.concat([self.reduced_day_grained_output_h, self.hour_grained_last_time_outputs, self.prediction_day_inputs], 1)
-        self.mlr_params = tf.get_variable(name="mlr_params", shape=[settings.day_grained_cell_size + settings.hour_grained_cell_size + settings.day_of_week_embedding_size + settings.holidays_distance_embedding_size + settings.end_of_holidays_distance_embedding_size + settings.is_weekend_weekday_embedding_size, 1], dtype='float64')
-        self.mlr_bias_d = tf.get_variable(name="mlr_bias_d", shape=[1], dtype='float64')
-        self._Y = tf.matmul(self.batch_results, self.mlr_params) + self.mlr_bias_d
+        self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[settings.day_grained_cell_size
+                                                                                              + settings.hour_grained_cell_size
+                                                                                              + settings.day_of_week_embedding_size
+                                                                                              + settings.holidays_distance_embedding_size
+                                                                                              + settings.end_of_holidays_distance_embedding_size
+                                                                                              + settings.is_weekend_weekday_embedding_size,
+                                                                                              settings.FCN_hidden_layer_size], dtype='float64')
+        self.FCN_input_layer_biases = tf.get_variable(name="FCN_input_layer_biases", shape=[settings.FCN_hidden_layer_size], dtype='float64')
+
+        self.hidden_layer_input = tf.nn.xw_plus_b(self.batch_results, self.FCN_input2hidden_params, self.FCN_input_layer_biases)
+        self.hidden_layer_output = tf.tanh(self.hidden_layer_input)
+        self.FCN_hidden2output_params = tf.get_variable(name="FCN_hidden2output_params", shape=[settings.FCN_hidden_layer_size, 1], dtype='float64')
+        self.FCN_hidden_layer_biases = tf.get_variable(name="FCN_input_layer_biases", shape=[1], dtype='float64')
+        self._Y = tf.nn.xw_plus_b(self.hidden_layer_output, self.FCN_hidden2output_params, self.FCN_hidden_layer_biases)
         self.Y = tf.placeholder(name="true_value", shape=[None, 1], dtype='float64')
         self.empirical_loss = tf.losses.mean_squared_error(self.Y, self._Y)
         # tf.get_collection('l2_loss')

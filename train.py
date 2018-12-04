@@ -3,8 +3,8 @@ import tensorflow as tf
 import datetime
 
 import config
+import utils
 from model_graphs import model
-import test
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
@@ -43,9 +43,9 @@ def main(args):
                                    num_epochs=FLAGS.num_epochs,
                                    keep_prob=FLAGS.keep_prob)
     train_data = np.load(train_settings.train_data_file_path)
-    # if FLAGS.test_when_training:
-    #     import test
-    #     test_data = test.load_test_data(FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date)
+    if FLAGS.test_when_training:
+        import test
+        test_data = test.load_test_data(FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date)
     with tf.Graph().as_default():
         sess = tf.Session()
         with sess.as_default():
@@ -58,40 +58,10 @@ def main(args):
             sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver(max_to_keep=None)
 
-            def generate_feed_dict(day_of_week_train_batch,
-                           holidays_distance_train_batch,
-                           end_of_holidays_distance_train_batch,
-                           is_weekend_weekday_train_batch,
-                           impression_per_day_train_batch,
-                           prediction_day_day_of_week_train_batch,
-                           prediction_day_holidays_distance_train_batch,
-                           prediction_day_end_of_holidays_distance_train_batch,
-                           prediction_day_is_weekend_weekday_train_batch,
-                           hour_per_day_train_batch,
-                           impression_per_hour_train_batch,
-                           Y_train_batch,
-                           actual_batch_size,
-                           keep_prob):
-                feed_dict = dict()
-                feed_dict[m.day_of_week] = day_of_week_train_batch
-                feed_dict[m.holidays_distance] = holidays_distance_train_batch
-                feed_dict[m.end_of_holidays_distance] = end_of_holidays_distance_train_batch
-                feed_dict[m.is_weekend_weekday] = is_weekend_weekday_train_batch
-                feed_dict[m.impression_per_day] = impression_per_day_train_batch
-                feed_dict[m.prediction_day_day_of_week] = prediction_day_day_of_week_train_batch
-                feed_dict[m.prediction_day_holidays_distance] = prediction_day_holidays_distance_train_batch
-                feed_dict[m.prediction_day_end_of_holidays_distance] = prediction_day_end_of_holidays_distance_train_batch
-                feed_dict[m.prediction_day_is_weekend_weekday] = prediction_day_is_weekend_weekday_train_batch
-                feed_dict[m.hour_per_day] = hour_per_day_train_batch
-                feed_dict[m.impression_per_hour] = impression_per_hour_train_batch
-                feed_dict[m.Y] = Y_train_batch
-                feed_dict[m.actual_batch_size] = actual_batch_size
-                feed_dict[m.keep_prob] = keep_prob
-                return feed_dict
+            if FLAGS.test_when_training:
 
-            # if FLAGS.test_when_training:
-            #     pass
-            #     # todo:产生test_feed_dict
+                pass
+                # todo:产生test_feed_dict
 
             minimum_MSE_loss = 1e10
             for epoch in range(train_settings.num_epochs):
@@ -137,27 +107,28 @@ def main(args):
                     impression_per_hour_batch = np.array(impression_per_hour_batch, dtype='float64').reshape([-1, 24, 1])
                     Y_batch = np.array(Y_batch, dtype='float64').reshape([-1, 1])
 
-                    feed_dict = generate_feed_dict(day_of_week_batch,
-                                                   holidays_distance_batch,
-                                                   end_of_holidays_distance_batch,
-                                                   is_weekend_weekday_batch,
-                                                   impression_per_day_batch,
-                                                   prediction_day_day_of_week_batch,
-                                                   prediction_day_holidays_distance_batch,
-                                                   prediction_day_end_of_holidays_distance_batch,
-                                                   prediction_day_is_weekend_weekday_batch,
-                                                   hour_per_day_batch,
-                                                   impression_per_hour_batch,
-                                                   Y_batch,
-                                                   Y_batch.shape[0],
-                                                   train_settings.keep_prob)
-                    temp, step, empirical_loss = sess.run([optimizer_term,
+                    feed_dict = utils.generate_feed_dict(m,
+                                                         day_of_week_batch,
+                                                         holidays_distance_batch,
+                                                         end_of_holidays_distance_batch,
+                                                         is_weekend_weekday_batch,
+                                                         impression_per_day_batch,
+                                                         prediction_day_day_of_week_batch,
+                                                         prediction_day_holidays_distance_batch,
+                                                         prediction_day_end_of_holidays_distance_batch,
+                                                         prediction_day_is_weekend_weekday_batch,
+                                                         hour_per_day_batch,
+                                                         impression_per_hour_batch,
+                                                         Y_batch,
+                                                         Y_batch.shape[0],
+                                                         train_settings.keep_prob)
+                    temp, step, final_loss = sess.run([optimizer_term,
                                                            global_step,
-                                                           m.empirical_loss],
+                                                           m.final_loss],
                                                           feed_dict=feed_dict)
                     time_string = datetime.datetime.now().strftime('%H:%M:%S')
                     if step % 100 == 0:
-                        info = "{}: step {}, empirical_loss {:g}".format(time_string, step, empirical_loss)
+                        info = "{}: step {}, empirical_loss {:g}".format(time_string, step, final_loss)
                         print(info)
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
