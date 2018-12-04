@@ -14,6 +14,7 @@ tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
 tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_integer('num_epochs', 100, 'epoch times')
 tf.app.flags.DEFINE_bool('test_when_training', True, 'test when training')
+tf.app.flags.DEFINE_float('learning_rate', 1000000, 'learning_rate')
 
 
 class TrainSettings:
@@ -53,7 +54,7 @@ def main(args):
             with tf.variable_scope("model", reuse=None, initializer=initializer):
                 m = model.Model(is_training=True)
             global_step = tf.Variable(0, name="global_step", trainable=False)
-            optimizer = tf.train.AdadeltaOptimizer(1.0)
+            optimizer = tf.train.AdadeltaOptimizer(learning_rate=FLAGS.learning_rate)
             optimizer_term = optimizer.minimize(m.empirical_loss, global_step=global_step)
             sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver(max_to_keep=None)
@@ -122,16 +123,17 @@ def main(args):
                                                          Y_batch,
                                                          Y_batch.shape[0],
                                                          train_settings.keep_prob)
-                    temp, step, final_loss, param_matrix = sess.run([optimizer_term,
-                                                       global_step,
-                                                       m.final_loss,
-                                                       m.FCN_hidden2output_params],
-                                                       feed_dict=feed_dict)
+                    temp, step, final_loss, y, _y = sess.run([optimizer_term,
+                                                              global_step,
+                                                              m.final_loss,
+                                                              m.Y,
+                                                              m._Y],
+                                                              feed_dict=feed_dict)
                     time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     if step % 100 == 0:
                         info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
-                        print(param_matrix)
+                        print(np.concatenate([y.reshape(-1, 1), _y.reshape(-1, 1)], 1))
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
                     # MSE_loss_on_test_data =
