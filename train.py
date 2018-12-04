@@ -130,7 +130,6 @@ def main(args):
                     if step % 100 == 0:
                         info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
-                        print(optimizer_term)
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
                     # MSE_loss_on_test_data =

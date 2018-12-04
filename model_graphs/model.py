@@ -70,13 +70,13 @@ class Model:
             day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 self.day_grained_outputs, self.day_grained_outputs_state = tf.nn.bidirectional_dynamic_rnn(day_grained_forward_lstm_cell,
-                                                                                                 day_grained_backward_lstm_cell,
-                                                                                                 self.day_grained_inputs,
-                                                                                                 initial_state_fw=day_grained_initial_state_forward,
-                                                                                                 initial_state_bw=day_grained_initial_state_backward)
+                                                                                                           day_grained_backward_lstm_cell,
+                                                                                                           self.day_grained_inputs,
+                                                                                                           initial_state_fw=day_grained_initial_state_forward,
+                                                                                                           initial_state_bw=day_grained_initial_state_backward)
             self.day_grained_output_forward = self.day_grained_outputs[0]
             self.day_grained_output_backward = self.day_grained_outputs[1]
-            self.day_grained_output_h = tf.add(self.day_grained_output_forward, self.day_grained_output_backward)
+            self.day_grained_output_h = tf.concat([self.day_grained_output_forward, self.day_grained_output_backward], 2)
             self.reduced_day_grained_output_h = tf.reduce_max(self.day_grained_output_h, 1)
             # day_grained_output_H = tf.concat([output_forward, output_backward],2)
 
@@ -123,7 +123,6 @@ class Model:
         self.prediction_day_end_of_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_end_of_holidays_distance')
         self.prediction_day_is_weekend_weekday = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_is_weekend_weekday')
 
-        # TODO:这里的全连接层没有隐层,无法刻画当天与先前数据的关系.
         self.prediction_day_inputs = tf.concat(
             values=[
                 tf.reshape(tf.nn.embedding_lookup(self.day_of_week_embedding, self.prediction_day_day_of_week), [-1, settings.day_of_week_embedding_size]),
@@ -134,7 +133,7 @@ class Model:
             axis=1
         )
         self.batch_results = tf.concat([self.reduced_day_grained_output_h, self.hour_grained_last_time_outputs, self.prediction_day_inputs], 1)
-        self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[settings.day_grained_cell_size
+        self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[2 * settings.day_grained_cell_size
                                                                                               + settings.hour_grained_cell_size
                                                                                               + settings.day_of_week_embedding_size
                                                                                               + settings.holidays_distance_embedding_size
