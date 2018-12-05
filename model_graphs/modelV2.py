@@ -1,3 +1,4 @@
+#In this model,
 import tensorflow as tf
 
 
@@ -68,28 +69,17 @@ class Model:
             )
 
             day_grained_forward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.day_grained_cell_size, use_peepholes=False, state_is_tuple=True)
-            day_grained_backward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.day_grained_cell_size, use_peepholes=False, state_is_tuple=True)
             if is_training and model_settings.keep_prob < 1:
                 day_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
-                day_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_backward_lstm_cell, input_keep_prob=self.keep_prob)
             day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
-            day_grained_initial_state_backward = day_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
-                self.day_grained_outputs, self.day_grained_outputs_state = tf.nn.bidirectional_dynamic_rnn(day_grained_forward_lstm_cell,
-                                                                                                           day_grained_backward_lstm_cell,
-                                                                                                           self.day_grained_inputs,
-                                                                                                           initial_state_fw=day_grained_initial_state_forward,
-                                                                                                           initial_state_bw=day_grained_initial_state_backward)
-            self.day_grained_output_forward = self.day_grained_outputs[0]
-            self.day_grained_output_backward = self.day_grained_outputs[1]
-            self.day_grained_output_h = tf.concat([self.day_grained_output_forward, self.day_grained_output_backward], 2)
-            self.reduced_day_grained_output_h = tf.reduce_max(self.day_grained_output_h, 1)
-            # day_grained_output_H = tf.concat([output_forward, output_backward],2)
+                self.day_grained_outputs, self.day_grained_outputs_state = tf.nn.dynamic_rnn(day_grained_forward_lstm_cell,
+                                                                                             self.day_grained_inputs,
+                                                                                             initial_state=day_grained_initial_state_forward)
+            self.day_grained_last_time_output = self.day_grained_outputs[:, -1, :]
 
             if is_training and model_settings.keep_prob < 1:
-                self.reduced_day_grained_output_h = tf.nn.dropout(self.reduced_day_grained_output_h, keep_prob=self.keep_prob)
-            # LSTM,h=output_gate.*tanh(c)
-            # self.day_grained_output_m = tf.tanh(self.reduced_day_grained_output_h)
+                self.day_grained_last_time_output = tf.nn.dropout(self.day_grained_last_time_output, keep_prob=self.keep_prob)
 
         with tf.variable_scope("hour_grained_processing_frame"):
             self.hour_per_day = tf.placeholder(dtype=tf.int32, shape=[None, model_settings.hour_grained_sequence_length], name='hour_per_day')
@@ -120,16 +110,16 @@ class Model:
             # output_backward = outputs[1]
             # output_H = tf.add(output_forward, output_backward)
             # output_H = tf.concat([output_forward, output_backward],2)
-            self.hour_grained_last_time_outputs = self.hour_grained_outputs[:, -1, :]
+            self.hour_grained_last_time_output = self.hour_grained_outputs[:, -1, :]
             if is_training and model_settings.keep_prob < 1:
-                self.hour_grained_last_time_outputs = tf.nn.dropout(self.hour_grained_last_time_outputs, keep_prob=self.keep_prob)
+                self.hour_grained_last_time_output = tf.nn.dropout(self.hour_grained_last_time_output, keep_prob=self.keep_prob)
 
         self.prediction_day_day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_day_of_week')
         self.prediction_day_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_holidays_distance')
         self.prediction_day_end_of_holidays_distance = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_end_of_holidays_distance')
         self.prediction_day_is_weekend_weekday = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_is_weekend_weekday')
 
-        self.prediction_day_inputs = tf.concat(
+        self.prediction_day_input = tf.concat(
             values=[
                 tf.reshape(tf.nn.embedding_lookup(self.day_of_week_embedding, self.prediction_day_day_of_week), [-1, model_settings.day_of_week_embedding_size]),
                 tf.reshape(tf.nn.embedding_lookup(self.holidays_distance_embedding, self.prediction_day_holidays_distance), [-1, model_settings.holidays_distance_embedding_size]),
@@ -138,7 +128,7 @@ class Model:
             ],
             axis=1
         )
-        self.batch_results = tf.concat([self.reduced_day_grained_output_h, self.hour_grained_last_time_outputs, self.prediction_day_inputs], 1)
+        self.batch_results = tf.concat([self.day_grained_last_time_output, self.hour_grained_last_time_output, self.prediction_day_input], 1)
         self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[2 * model_settings.day_grained_cell_size
                                                                                               + model_settings.hour_grained_cell_size
                                                                                               + model_settings.day_of_week_embedding_size
