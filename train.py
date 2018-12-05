@@ -14,7 +14,7 @@ tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
 tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_integer('num_epochs', 100, 'epoch times')
 tf.app.flags.DEFINE_bool('test_when_training', True, 'test when training')
-tf.app.flags.DEFINE_float('learning_rate', 1000000, 'learning_rate')
+tf.app.flags.DEFINE_float('learning_rate', 1, 'learning_rate')
 
 
 class TrainSettings:

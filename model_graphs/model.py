@@ -148,7 +148,7 @@ class Model:
         self.FCN_hidden_layer_bias = tf.get_variable(name="FCN_output_layer_bias", shape=[1], dtype='float64')
         self._Y = tf.nn.xw_plus_b(self.hidden_layer_output, self.FCN_hidden2output_params, self.FCN_hidden_layer_bias)
         self.Y = tf.placeholder(name="true_value", shape=[None, 1], dtype='float64')
-        self.empirical_loss = tf.losses.mean_squared_error(tf.sigmoid(self.Y), tf.sigmoid(self._Y))
+        self.empirical_loss = tf.losses.mean_squared_error(self.Y, self._Y)
         # tf.get_collection('l2_loss')
         # for v in tf.trainable_variables():
         #     if v is word_embedding:
