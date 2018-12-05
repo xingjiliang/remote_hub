@@ -41,16 +41,27 @@ def main(args):
             global_step = tf.Variable(0, name="global_step", trainable=False)
             optimizer = tf.train.AdadeltaOptimizer(learning_rate=FLAGS.learning_rate)
             optimizer_term = optimizer.minimize(m.empirical_loss, global_step=global_step)
-            sess.run(tf.global_variables_initializer())
             saver = tf.train.Saver(max_to_keep=None)
+            if FLAGS.load_previous_model:
+                if len(FLAGS.previous_model_name) == 0 or FLAGS.previous_model_epoch_times == 0:
+                    print("You should input previous model name and latest epoch times.")
+                    exit(1)
+                else:
+                    saver.restore(sess, "%s%s_%d_epochs" % (config.model_path, FLAGS.previous_model_name, FLAGS.previous_model_epoch_times))
+            else:
+                sess.run(tf.global_variables_initializer())
 
             # if FLAGS.test_when_training:
 
                 # pass
                 # todo:产生test_feed_dict
 
-            minimum_MSE_loss = 1e10
-            for epoch in range(FLAGS.num_epochs):
+            start_epoch_num = 1
+            end_epoch_num = FLAGS.num_epochs+1
+            if FLAGS.load_previous_model:
+                start_epoch_num += FLAGS.previous_model_epoch_times
+                end_epoch_num += FLAGS.previous_model_epoch_times
+            for epoch in range(start_epoch_num, end_epoch_num):
                 random_order = list(range(len(train_data)))
                 np.random.shuffle(random_order)
                 for i in range(int(len(random_order) / float(FLAGS.batch_size)) + 1):
@@ -125,7 +136,7 @@ def main(args):
                     # if epoch % 10 == 0 or MSE_loss_on_test_data < minimum_MSE_loss:
                     if epoch % 10 == 0:
                         print('The current model is being stored.')
-                        path = saver.save(sess, config.model_path + 'RegressionModel', global_step=current_step)
+                        path = saver.save(sess, config.model_path + 'RegressionModel_%d_epochs' % epoch)
                         info = 'The current model has been stored to ' + path
                         print(info)
 
