@@ -40,8 +40,7 @@ class ModelSettings:
 
 
 class Model:
-    def __init__(self, model_settings,is_training=False):
-        model_settings = ModelSettings()
+    def __init__(self, model_settings, is_training=False):
         self.keep_prob = tf.placeholder(dtype=tf.float64, name='keep_prob')
         self.actual_batch_size_scalar = tf.placeholder(dtype=tf.int32, shape=[1], name='actual_batch_size_scalar')
         actual_batch_size = self.actual_batch_size_scalar[0]
