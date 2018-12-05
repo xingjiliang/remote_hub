@@ -6,44 +6,12 @@ import config
 import utils
 from model_graphs import model
 
-FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
-tf.app.flags.DEFINE_string('train_start_date', '2018-03-19', 'train start date')
-tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
-# tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
-tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
-tf.app.flags.DEFINE_integer('num_epochs', 100, 'epoch times')
-tf.app.flags.DEFINE_bool('test_when_training', True, 'test when training')
-tf.app.flags.DEFINE_float('learning_rate', 1, 'learning_rate')
-
-
-class TrainSettings:
-    def __init__(
-            self,
-            city_id,
-            train_start_date,
-            train_end_date,
-            batch_size,
-            num_epochs,
-            keep_prob
-    ):
-        self.city_id = city_id
-        self.train_start_date = train_start_date
-        self.train_end_date = train_end_date
-        self.train_data_file_path = config.dataset_dir_path + str(city_id) + "_train_data_%s_%s.npy" % (train_start_date, train_end_date)
-        self.batch_size = batch_size
-        self.num_epochs = num_epochs
-        self.keep_prob = keep_prob
+FLAGS = config.FLAGS
 
 
 def main(args):
-    train_settings = TrainSettings(city_id=FLAGS.city_id,
-                                   train_start_date=FLAGS.train_start_date,
-                                   train_end_date=FLAGS.train_end_date,
-                                   batch_size=FLAGS.batch_size,
-                                   num_epochs=FLAGS.num_epochs,
-                                   keep_prob=FLAGS.keep_prob)
-    train_data = np.load(train_settings.train_data_file_path)
+    train_data_file_path = config.dataset_dir_path + str(FLAGS.city_id) + "_train_data_%s_%s.npy" % (FLAGS.train_start_date, FLAGS.train_end_date)
+    train_data = np.load(train_data_file_path)
     # if FLAGS.test_when_training:
     #     import test
     #     test_data = test.load_test_data(FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date)
@@ -52,7 +20,24 @@ def main(args):
         with sess.as_default():
             initializer = tf.contrib.layers.xavier_initializer()
             with tf.variable_scope("model", reuse=None, initializer=initializer):
-                m = model.Model(is_training=True)
+                model_settings = model.ModelSettings(
+                    keep_prob=FLAGS.keep_prob,
+                    l2_lambda=FLAGS.l2_lambda,
+                    day_grained_sequence_length=FLAGS.day_grained_sequence_length,
+                    day_grained_cell_size=FLAGS.day_grained_cell_size,
+                    day_of_week_embedding_size=FLAGS.day_of_week_embedding_size,
+                    holidays_distance_size=FLAGS.holidays_distance_size,
+                    holidays_distance_embedding_size=FLAGS.holidays_distance_embedding_size,
+                    end_of_holidays_distance_size=FLAGS.end_of_holidays_distance_size,
+                    end_of_holidays_distance_embedding_size=FLAGS.end_of_holidays_distance_embedding_size,
+                    is_weekend_weekday_embedding_size=FLAGS.is_weekend_weekday_embedding_size,
+                    hour_grained_sequence_length=FLAGS.hour_grained_sequence_length,
+                    hour_grained_cell_size=FLAGS.hour_grained_cell_size,
+                    hour_per_day_embedding_size=FLAGS.hour_per_day_embedding_size,
+                    fcn_layer_nums=FLAGS.fcn_layer_nums,
+                    fcn_hidden_layer_size=FLAGS.fcn_hidden_layer_size
+                )
+                m = model.Model(model_settings=model_settings, is_training=True)
             global_step = tf.Variable(0, name="global_step", trainable=False)
             optimizer = tf.train.AdadeltaOptimizer(learning_rate=FLAGS.learning_rate)
             optimizer_term = optimizer.minimize(m.empirical_loss, global_step=global_step)
@@ -65,10 +50,10 @@ def main(args):
                 # todo:产生test_feed_dict
 
             minimum_MSE_loss = 1e10
-            for epoch in range(train_settings.num_epochs):
+            for epoch in range(FLAGS.num_epochs):
                 random_order = list(range(len(train_data)))
                 np.random.shuffle(random_order)
-                for i in range(int(len(random_order) / float(train_settings.batch_size)) + 1):
+                for i in range(int(len(random_order) / float(FLAGS.batch_size)) + 1):
                     day_of_week_batch = []
                     holidays_distance_batch = []
                     end_of_holidays_distance_batch = []
@@ -81,7 +66,7 @@ def main(args):
                     hour_per_day_batch = []
                     impression_per_hour_batch = []
                     Y_batch = []
-                    input_batch_numbers = random_order[i * train_settings.batch_size:(i + 1) * train_settings.batch_size]
+                    input_batch_numbers = random_order[i * FLAGS.batch_size:(i + 1) * FLAGS.batch_size]
                     for k in input_batch_numbers:
                         day_of_week_batch.append(train_data[k][1][:, 0])
                         holidays_distance_batch.append(train_data[k][1][:, 1])
@@ -122,13 +107,13 @@ def main(args):
                                                          impression_per_hour_batch,
                                                          Y_batch,
                                                          Y_batch.shape[0],
-                                                         train_settings.keep_prob)
+                                                         FLAGS.keep_prob)
                     temp, step, final_loss, y, _y = sess.run([optimizer_term,
                                                               global_step,
                                                               m.final_loss,
                                                               m.Y,
                                                               m._Y],
-                                                              feed_dict=feed_dict)
+                                                             feed_dict=feed_dict)
                     time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     if step % 100 == 0:
                         info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
