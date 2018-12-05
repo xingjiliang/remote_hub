@@ -1,4 +1,5 @@
 .idea
 docs
+models
 __pycache__
 *.log
