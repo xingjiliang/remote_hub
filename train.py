@@ -4,7 +4,7 @@ import datetime
 
 import config
 import utils
-from model_graphs import model
+from model_graphs import modelV2 as model
 
 FLAGS = config.FLAGS
 
