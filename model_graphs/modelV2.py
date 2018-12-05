@@ -129,7 +129,7 @@ class Model:
             axis=1
         )
         self.batch_results = tf.concat([self.day_grained_last_time_output, self.hour_grained_last_time_output, self.prediction_day_input], 1)
-        self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[2 * model_settings.day_grained_cell_size
+        self.FCN_input2hidden_params = tf.get_variable(name="FCN_input2hidden_params", shape=[model_settings.day_grained_cell_size
                                                                                               + model_settings.hour_grained_cell_size
                                                                                               + model_settings.day_of_week_embedding_size
                                                                                               + model_settings.holidays_distance_embedding_size
