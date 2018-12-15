@@ -42,12 +42,9 @@ def main(args):
             optimizer = tf.train.AdadeltaOptimizer(learning_rate=FLAGS.learning_rate)
             optimizer_term = optimizer.minimize(m.empirical_loss, global_step=global_step)
             saver = tf.train.Saver(max_to_keep=None)
-            if FLAGS.load_previous_model:
-                if len(FLAGS.previous_model_name) == 0 or FLAGS.previous_model_epoch_times == 0:
-                    print("You should input previous model name and latest epoch times.")
-                    exit(1)
-                else:
-                    saver.restore(sess, "%s%s_%d_epochs" % (config.model_path, FLAGS.previous_model_name, FLAGS.previous_model_epoch_times))
+            if len(FLAGS.previous_model_name) and FLAGS.previous_model_epoch_times:
+                saver.restore(sess, "%s%s_%d_epochs" % (
+                config.model_path, FLAGS.previous_model_name, FLAGS.previous_model_epoch_times))
             else:
                 sess.run(tf.global_variables_initializer())
 
