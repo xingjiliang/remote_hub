@@ -92,7 +92,7 @@ def main(args):
                         hour_per_day_batch.append(train_data[k][3][:, 0])
                         impression_per_hour_batch.append(train_data[k][3][:, 2])
                         Y_batch.append(train_data[k][4])
-                        true_impression_batch.append(train_data[k][2][-1])
+                        true_impression_batch.append(train_data[k][1][:, 4][0])
                     day_of_week_batch = np.array(day_of_week_batch, dtype='int32')
                     holidays_distance_batch = np.array(holidays_distance_batch, dtype='int32')
                     end_of_holidays_distance_batch = np.array(end_of_holidays_distance_batch, dtype='int32')
@@ -132,7 +132,7 @@ def main(args):
                     if step % 100 == 0:
                         info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
-                        print(np.concatenate([y.reshape(-1, 1) * true_impression_batch, _y.reshape(-1, 1) * true_impression_batch], 1))
+                        print(np.concatenate([(y.reshape(-1, 1) + 1) * true_impression_batch, (_y.reshape(-1, 1) + 1) * true_impression_batch], 1))
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
                     # MSE_loss_on_test_data =

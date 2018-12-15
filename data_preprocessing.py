@@ -43,7 +43,7 @@ def generate_data(tsv_file, save_as_file=True):
             if tmp < df.iloc[i, 4] and tmp >= 0:
                 df.iloc[i, 4] = tmp
         for weekend_weekday in weekend_weekdays:
-            if pd.to_datetime(weekend_weekday) == df.iloc[i,1]:
+            if pd.to_datetime(weekend_weekday) == df.iloc[i, 1]:
                 df.iloc[i, 5] = 1
     df.holidays_distance = df.holidays_distance + 7
     day_grained_dataframe = df[['datetime', 'day_of_week', 'holidays_distance', 'end_of_holidays_distance', 'is_weekend_weekday', 'count']]
