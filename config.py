@@ -28,6 +28,8 @@ tf.app.flags.DEFINE_integer('hour_grained_cell_size', 15, 'hour_grained_cell_siz
 tf.app.flags.DEFINE_integer('hour_per_day_embedding_size', 5, 'hour_per_day_embedding_size')
 tf.app.flags.DEFINE_integer('fcn_layer_nums', 1, 'fcn_layer_nums')
 tf.app.flags.DEFINE_integer('fcn_hidden_layer_size', 20, 'fcn_hidden_layer_size')
+tf.app.flags.DEFINE_string('test_start_date', '2018-08-16', 'test start date')
+tf.app.flags.DEFINE_string('test_end_date', '2018-09-21', 'test end date')
 
 origin_dataset_dir_path = "origin_dataset/"
 dataset_dir_path = "dataset/"

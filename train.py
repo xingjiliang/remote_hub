@@ -9,7 +9,7 @@ from model_graphs import modelV2 as model
 FLAGS = config.FLAGS
 
 
-def main(args):
+def main(_):
     train_data_file_path = config.dataset_dir_path + str(FLAGS.city_id) + "_train_data_%s_%s.npy" % (FLAGS.train_start_date, FLAGS.train_end_date)
     train_data = np.load(train_data_file_path)
     # if FLAGS.test_when_training:
@@ -62,63 +62,9 @@ def main(args):
                 random_order = list(range(len(train_data)))
                 np.random.shuffle(random_order)
                 for i in range(int(len(random_order) / float(FLAGS.batch_size)) + 1):
-                    day_of_week_batch = []
-                    holidays_distance_batch = []
-                    end_of_holidays_distance_batch = []
-                    is_weekend_weekday_batch = []
-                    impression_per_day_batch = []
-                    prediction_day_day_of_week_batch = []
-                    prediction_day_holidays_distance_batch = []
-                    prediction_day_end_of_holidays_distance_batch = []
-                    prediction_day_is_weekend_weekday_batch = []
-                    hour_per_day_batch = []
-                    impression_per_hour_batch = []
-                    Y_batch = []
-                    true_impression_batch = []
-                    input_batch_numbers = random_order[i * FLAGS.batch_size:(i + 1) * FLAGS.batch_size]
-                    for k in input_batch_numbers:
-                        day_of_week_batch.append(train_data[k][1][:, 0])
-                        holidays_distance_batch.append(train_data[k][1][:, 1])
-                        end_of_holidays_distance_batch.append(train_data[k][1][:, 2])
-                        is_weekend_weekday_batch.append(train_data[k][1][:, 3])
-                        impression_per_day_batch.append(train_data[k][1][:, 5])
-                        prediction_day_day_of_week_batch.append(train_data[k][2][0])
-                        prediction_day_holidays_distance_batch.append(train_data[k][2][1])
-                        prediction_day_end_of_holidays_distance_batch.append(train_data[k][2][2])
-                        prediction_day_is_weekend_weekday_batch .append(train_data[k][2][3])
-                        hour_per_day_batch.append(train_data[k][3][:, 0])
-                        impression_per_hour_batch.append(train_data[k][3][:, 2])
-                        Y_batch.append(train_data[k][4])
-                        true_impression_batch.append(train_data[k][1][:, 4][0])
-                    day_of_week_batch = np.array(day_of_week_batch, dtype='int32')
-                    holidays_distance_batch = np.array(holidays_distance_batch, dtype='int32')
-                    end_of_holidays_distance_batch = np.array(end_of_holidays_distance_batch, dtype='int32')
-                    is_weekend_weekday_batch = np.array(is_weekend_weekday_batch, dtype='int32')
-                    impression_per_day_batch = np.array(impression_per_day_batch, dtype='float64').reshape([-1, 7, 1])
-                    prediction_day_day_of_week_batch = np.array(prediction_day_day_of_week_batch, dtype='int32').reshape([-1, 1])
-                    prediction_day_holidays_distance_batch = np.array(prediction_day_holidays_distance_batch, dtype='int32').reshape([-1, 1])
-                    prediction_day_end_of_holidays_distance_batch = np.array(prediction_day_end_of_holidays_distance_batch, dtype='int32').reshape([-1, 1])
-                    prediction_day_is_weekend_weekday_batch = np.array(prediction_day_is_weekend_weekday_batch, dtype='int32').reshape([-1, 1])
-                    hour_per_day_batch = np.array(hour_per_day_batch, dtype='int32')
-                    impression_per_hour_batch = np.array(impression_per_hour_batch, dtype='float64').reshape([-1, 24, 1])
-                    Y_batch = np.array(Y_batch, dtype='float64').reshape([-1, 1])
-                    true_impression_batch = np.array(true_impression_batch, dtype='float64').reshape([-1, 1])
-
-                    feed_dict = utils.generate_feed_dict(m,
-                                                         day_of_week_batch,
-                                                         holidays_distance_batch,
-                                                         end_of_holidays_distance_batch,
-                                                         is_weekend_weekday_batch,
-                                                         impression_per_day_batch,
-                                                         prediction_day_day_of_week_batch,
-                                                         prediction_day_holidays_distance_batch,
-                                                         prediction_day_end_of_holidays_distance_batch,
-                                                         prediction_day_is_weekend_weekday_batch,
-                                                         hour_per_day_batch,
-                                                         impression_per_hour_batch,
-                                                         Y_batch,
-                                                         Y_batch.shape[0],
-                                                         FLAGS.keep_prob)
+                    input_batch_indexes = random_order[i * FLAGS.batch_size:(i + 1) * FLAGS.batch_size]
+                    train_data_batch = train_data.take(input_batch_indexes, axis=0)
+                    feed_dict, true_impression_batch = utils.generate_feed_dict(train_data_batch, m, FLAGS.keep_prob)
                     temp, step, final_loss, y, _y = sess.run([optimizer_term,
                                                               global_step,
                                                               m.final_loss,
