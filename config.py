@@ -2,11 +2,12 @@ import sys
 import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_bool('remains', True, 'predict remains of one day or full day')
+tf.app.flags.DEFINE_string('model_name', 'rnnV2', 'model name')
 tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
 tf.app.flags.DEFINE_string('train_start_date', '2018-03-19', 'train start date')
 tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
 tf.app.flags.DEFINE_bool('load_previous_model', False, 'city id')
-tf.app.flags.DEFINE_string('previous_model_name', None, 'previous_model_name')
 tf.app.flags.DEFINE_integer('previous_model_epoch_times', None, 'previous_model_epoch_times')
 tf.app.flags.DEFINE_float('learning_rate', 0.1, 'learning rate')
 tf.app.flags.DEFINE_float('keep_prob', 0.5, 'keep prob')
@@ -14,31 +15,15 @@ tf.app.flags.DEFINE_float('l2_lambda', 1e-5, 'l2 lambda')
 tf.app.flags.DEFINE_integer('batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_integer('num_epochs', 1000, 'epoch times')
 tf.app.flags.DEFINE_bool('evaluate_when_training', True, 'evaluate when training')
-tf.app.flags.DEFINE_integer('full_connection_layer_nums', 1, 'full_connection_layer_nums')
-tf.app.flags.DEFINE_integer('day_grained_sequence_length', 7, 'day grained sequence length')
-tf.app.flags.DEFINE_integer('day_grained_cell_size', 30, 'day_grained_cell_size')
-tf.app.flags.DEFINE_integer('day_of_week_embedding_size', 5, 'day_of_week_embedding_size')
-tf.app.flags.DEFINE_integer('holidays_distance_size', 7*2+2, 'holidays_distance_size')
-tf.app.flags.DEFINE_integer('holidays_distance_embedding_size', 5, 'holidays_distance_embedding_size')
-tf.app.flags.DEFINE_integer('end_of_holidays_distance_size', 7+2, 'end_of_holidays_distance_size')
-tf.app.flags.DEFINE_integer('end_of_holidays_distance_embedding_size', 5, 'end_of_holidays_distance_embedding_size')
-tf.app.flags.DEFINE_integer('is_weekend_weekday_embedding_size', 5, 'is_weekend_weekday_embedding_size')
-tf.app.flags.DEFINE_integer('hour_grained_sequence_length', 24, 'hour_grained_sequence_length')
-tf.app.flags.DEFINE_integer('hour_grained_cell_size', 15, 'hour_grained_cell_size')
-tf.app.flags.DEFINE_integer('hour_per_day_embedding_size', 5, 'hour_per_day_embedding_size')
-tf.app.flags.DEFINE_integer('fcn_layer_nums', 1, 'fcn_layer_nums')
-tf.app.flags.DEFINE_integer('fcn_hidden_layer_size', 20, 'fcn_hidden_layer_size')
+tf.app.flags.DEFINE_integer('test_data_batch_size', 64, 'batch size')
 tf.app.flags.DEFINE_string('test_start_date', '2018-08-16', 'test start date')
 tf.app.flags.DEFINE_string('test_end_date', '2018-09-21', 'test end date')
 
-origin_dataset_dir_path = "origin_dataset/"
-dataset_dir_path = "dataset/"
-model_graph_path = "model_graphs/"
-model_path = "models/"
+origin_dataset_dir = "origin_dataset"
+dataset_dir = "dataset"
+model_graph_dir = "model_graphs"
+model_params_dir = "models"
 dateset_start_date = '2017-03-03'
-mytest_dataset_file_path = origin_dataset_dir_path + "1.tsv"
-mytest_train_data_file_path = dataset_dir_path
-mytest_test_data_file_path = dataset_dir_path
 
 holidays = [
     '2017-04-02',

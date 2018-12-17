@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 
+import os
 import pandas as pd
 import numpy as np
 import datetime
@@ -7,9 +8,9 @@ import datetime
 import config
 
 
-def generate_data(tsv_file, save_as_file=True):
+def generate_data(tsv_file, remains=True, save_as_file=True):
     city_id = int(tsv_file.split(sep='.')[0])
-    origin_dataset_file_path = config.origin_dataset_dir_path + tsv_file
+    origin_dataset_file_path = os.path.join(config.origin_dataset_dir, tsv_file)
     holidays = config.holidays
     end_of_holidays = config.end_of_holidays
     weekend_weekdays = config.weekend_weekdays
@@ -60,10 +61,12 @@ def generate_data(tsv_file, save_as_file=True):
             day_grained_8_days_data = []
             for delta_days in range(7, 0, -1):
                 day_grained_8_days_data.append(day_grained_dataframe.loc[(hour_grained_dataframe.iloc[i].datetime - datetime.timedelta(days=delta_days)).strftime('%Y-%m-%d')].values[1:])
-
             day_grained_8_days_data.append(day_grained_dataframe.loc[hour_grained_dataframe.iloc[i].datetime.strftime('%Y-%m-%d')].values[1:])
+            goal = day_grained_8_days_data[-1][-1]
+            if remains:
+                day_grained_8_days_data[-1][-1] = day_grained_8_days_data[-1][-1] - hour_grained_dataframe.iloc[i - (i % 24):i]['count'].sum()
             day_grained_8_days_data = np.array(day_grained_8_days_data, dtype='float64')
-            day_growth_rate_vector = (np.array(day_grained_8_days_data[:, 4], dtype='float64') / float(day_grained_8_days_data[:, 4][0]) - 1).reshape(-1, 1)
+            day_growth_rate_vector = (np.array(day_grained_8_days_data[:, 4], dtype='float64') / float(day_grained_8_days_data[0, 4]) - 1).reshape(-1, 1)
             day_grained_8_days_data = np.concatenate([day_grained_8_days_data, day_growth_rate_vector], 1)
             hour_grained_data = np.array(hour_grained_dataframe.iloc[i - 25: i].values[:, 1:], dtype='float64')
             hour_growth_rate_vector = (hour_grained_data[:, 1] / hour_grained_data[0, 1] - 1).reshape(-1, 1)
@@ -71,22 +74,31 @@ def generate_data(tsv_file, save_as_file=True):
                         day_grained_8_days_data[:-1],
                         day_grained_8_days_data[-1, :-1],
                         np.concatenate([hour_grained_data, hour_growth_rate_vector], 1)[1:],
-                        day_grained_8_days_data[-1, -1]]
+                        day_grained_8_days_data[-1, -1],
+                        np.array([day_grained_8_days_data[0, 4],
+                                  hour_grained_dataframe.iloc[i - (i % 24):i]['count'].sum(),
+                                  hour_grained_dataframe.iloc[i:i + (24 - i % 24)]['count'].sum(),
+                                  goal], dtype='float64')
+                         ]
                         )
     data = np.array(data)
     if save_as_file:
-        np.save(config.dataset_dir_path + str(city_id) + "_data.npy", data)
+        if remains:
+            np.save(os.path.join(config.dataset_dir, "%d_data.npy" % city_id), data)
+        else:
+            np.save(os.path.join(config.dataset_dir, "%d_data_predict_full_day.npy" % city_id), data)
     return data
 
 
 def generate_train_and_test_data(
         data,
+        city_id,
         train_data_start_date,
         train_data_end_date,
         test_data_start_date,
         test_data_end_date,
+        remains=True,
         save_as_file=True,
-        city_id=0
 ):
     train_data_start_index = np.argwhere(data[:, 0] == pd.to_datetime(train_data_start_date))[0, 0]
     train_data_end_index = np.argwhere(data[:, 0] == pd.to_datetime(train_data_end_date))[0, 0]
@@ -95,15 +107,24 @@ def generate_train_and_test_data(
     train_data = data[train_data_start_index:train_data_end_index]
     test_data = data[test_data_start_index:test_data_end_index]
     if save_as_file:
-        np.save(config.dataset_dir_path + str(city_id) + "_train_data_%s_%s.npy" % (train_data_start_date, train_data_end_date), train_data)
-        np.save(config.dataset_dir_path + str(city_id) + "_test_data_%s_%s.npy" % (test_data_start_date, test_data_end_date), test_data)
+        if remains:
+            np.save(os.path.join(config.dataset_dir, "%d_train_data_%s_%s.npy" %
+                    (city_id, train_data_start_date, train_data_end_date)), train_data)
+            np.save(os.path.join(config.dataset_dir, "%d_test_data_%s_%s.npy" %
+                    (city_id, test_data_start_date, test_data_end_date)), test_data)
+        else:
+            np.save(os.path.join(config.dataset_dir, "%d_train_data_predict_full_day_%s_%s.npy" %
+                    (city_id, train_data_start_date, train_data_end_date)), train_data)
+            np.save(os.path.join(config.dataset_dir, "%d_test_data_predict_full_day_%s_%s.npy" %
+                    (city_id, test_data_start_date, test_data_end_date)), test_data)
     return train_data, test_data
 
 
 if __name__ == '__main__':
-    generate_train_and_test_data(data=generate_data("1.tsv"),
+    generate_train_and_test_data(data=generate_data("1.tsv", remains=True),
                                  train_data_start_date='2018-03-19',
                                  train_data_end_date='2018-08-16',
                                  test_data_start_date='2018-08-16',
                                  test_data_end_date='2018-09-21',
-                                 city_id=1)
+                                 city_id=1,
+                                 remains=True)

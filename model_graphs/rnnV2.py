@@ -1,47 +1,28 @@
-#In this model,
 import tensorflow as tf
 
 
 class ModelSettings:
-    def __init__(self,
-                 keep_prob,
-                 l2_lambda,
-                 day_grained_sequence_length,
-                 day_grained_cell_size,
-                 day_of_week_embedding_size,
-                 holidays_distance_size,
-                 holidays_distance_embedding_size,
-                 end_of_holidays_distance_size,
-                 end_of_holidays_distance_embedding_size,
-                 is_weekend_weekday_embedding_size,
-                 hour_grained_sequence_length,
-                 hour_grained_cell_size,
-                 hour_per_day_embedding_size,
-                 fcn_layer_nums,
-                 fcn_hidden_layer_size):
-        self.keep_prob = keep_prob
-        self.model_WTF = "origin"
-        self.l2_lambda = l2_lambda
-        self.day_grained_sequence_length = day_grained_sequence_length
-        self.day_grained_cell_size = day_grained_cell_size
-        self.day_of_week_size = 7
-        self.day_of_week_embedding_size = day_of_week_embedding_size
-        self.holidays_distance_size = holidays_distance_size
-        self.holidays_distance_embedding_size = holidays_distance_embedding_size
-        self.end_of_holidays_distance_size = end_of_holidays_distance_size
-        self.end_of_holidays_distance_embedding_size = end_of_holidays_distance_embedding_size
-        self.is_weekend_weekday_size = 2
-        self.is_weekend_weekday_embedding_size = is_weekend_weekday_embedding_size
-        self.hour_grained_sequence_length = hour_grained_sequence_length
-        self.hour_grained_cell_size = hour_grained_cell_size
-        self.hour_per_day_size = 24
-        self.hour_per_day_embedding_size = hour_per_day_embedding_size
-        self.fcn_layer_nums = fcn_layer_nums
-        self.fcn_hidden_layer_size = fcn_hidden_layer_size
+    day_grained_sequence_length = 7
+    day_grained_cell_size = 30
+    day_of_week_size = 7
+    day_of_week_embedding_size = 5
+    holidays_distance_size = 7*2+2
+    holidays_distance_embedding_size = 5
+    end_of_holidays_distance_size = 7+2
+    end_of_holidays_distance_embedding_size = 5
+    is_weekend_weekday_size = 2
+    is_weekend_weekday_embedding_size = 5
+    hour_grained_sequence_length = 24
+    hour_grained_cell_size = 20
+    hour_per_day_size = 24
+    hour_per_day_embedding_size = 10
+    fcn_layer_nums = 1
+    fcn_hidden_layer_size = 20
 
 
 class Model:
-    def __init__(self, model_settings, is_training=False):
+    def __init__(self, is_training=False):
+        model_settings = ModelSettings()
         self.keep_prob = tf.placeholder(dtype=tf.float64, name='keep_prob')
         self.actual_batch_size_scalar = tf.placeholder(dtype=tf.int32, shape=[1], name='actual_batch_size_scalar')
         actual_batch_size = self.actual_batch_size_scalar[0]
@@ -59,17 +40,17 @@ class Model:
             self.is_weekend_weekday_embedding = tf.get_variable(name='is_weekend_weekday_embedding', shape=[model_settings.is_weekend_weekday_size, model_settings.is_weekend_weekday_embedding_size], dtype='float64')
             self.day_grained_inputs = tf.concat(
                 values=[
-                tf.nn.embedding_lookup(self.day_of_week_embedding, self.day_of_week),
-                tf.nn.embedding_lookup(self.holidays_distance_embedding, self.holidays_distance),
-                tf.nn.embedding_lookup(self.end_of_holidays_distance_embedding, self.end_of_holidays_distance),
-                tf.nn.embedding_lookup(self.is_weekend_weekday_embedding, self.is_weekend_weekday),
-                self.impression_per_day
+                    tf.nn.embedding_lookup(self.day_of_week_embedding, self.day_of_week),
+                    tf.nn.embedding_lookup(self.holidays_distance_embedding, self.holidays_distance),
+                    tf.nn.embedding_lookup(self.end_of_holidays_distance_embedding, self.end_of_holidays_distance),
+                    tf.nn.embedding_lookup(self.is_weekend_weekday_embedding, self.is_weekend_weekday),
+                    self.impression_per_day
                 ],
                 axis=2
             )
 
             day_grained_forward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.day_grained_cell_size, use_peepholes=False, state_is_tuple=True)
-            if is_training and model_settings.keep_prob < 1:
+            if is_training:
                 day_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
             day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
@@ -78,7 +59,7 @@ class Model:
                                                                                              initial_state=day_grained_initial_state_forward)
             self.day_grained_last_time_output = self.day_grained_outputs[:, -1, :]
 
-            if is_training and model_settings.keep_prob < 1:
+            if is_training:
                 self.day_grained_last_time_output = tf.nn.dropout(self.day_grained_last_time_output, keep_prob=self.keep_prob)
 
         with tf.variable_scope("hour_grained_processing_frame"):
@@ -88,15 +69,15 @@ class Model:
             self.hour_per_day_embedding = tf.get_variable(name='hour_per_day_embedding', shape=[model_settings.hour_per_day_size, model_settings.hour_per_day_embedding_size], dtype='float64')
             self.hour_grained_inputs = tf.concat(
                 values=[
-                tf.nn.embedding_lookup(self.hour_per_day_embedding, self.hour_per_day),
-                self.impression_per_hour
+                    tf.nn.embedding_lookup(self.hour_per_day_embedding, self.hour_per_day),
+                    self.impression_per_hour
                 ],
                 axis=2
             )
 
             hour_grained_forward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.hour_grained_cell_size, use_peepholes=False, state_is_tuple=True)
             # hour_grained_backward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.hour_grained_cell_size, use_peepholes=True, state_is_tuple=True)
-            if is_training and model_settings.keep_prob < 1:
+            if is_training:
                 hour_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
                 # hour_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_backward_lstm_cell, input_keep_prob=model_settings.keep_prob)
             hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
@@ -111,7 +92,7 @@ class Model:
             # output_H = tf.add(output_forward, output_backward)
             # output_H = tf.concat([output_forward, output_backward],2)
             self.hour_grained_last_time_output = self.hour_grained_outputs[:, -1, :]
-            if is_training and model_settings.keep_prob < 1:
+            if is_training:
                 self.hour_grained_last_time_output = tf.nn.dropout(self.hour_grained_last_time_output, keep_prob=self.keep_prob)
 
         self.prediction_day_day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, 1], name='prediction_day_day_of_week')
