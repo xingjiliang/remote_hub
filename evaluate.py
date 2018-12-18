@@ -6,7 +6,6 @@ from sklearn import metrics
 
 import config
 import utils
-import metrics
 from model_graphs import rnnV2 as model
 
 FLAGS = tf.app.flags.FLAGS

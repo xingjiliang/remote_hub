@@ -1,4 +1,5 @@
 import os
+import importlib
 import numpy as np
 import tensorflow as tf
 import datetime
@@ -10,7 +11,7 @@ FLAGS = config.FLAGS
 
 
 def main(_):
-    from model_graphs import rnnV2 as model
+    model = importlib.import_module(config.model_graph_dir + '.' + FLAGS.model_name)
     train_data_file_path = os.path.join(config.dataset_dir, "%d_train_data_%s_%s.npy" % (FLAGS.city_id, FLAGS.train_start_date, FLAGS.train_end_date))
     train_data = np.load(train_data_file_path)
     # if FLAGS.evaluate_when_training:
@@ -57,7 +58,7 @@ def main(_):
                                                              feed_dict=feed_dict)
                     time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     if step % 100 == 0:
-                        info = "[{}] epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
+                        info = "{} - epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
                         print(np.concatenate([goal_batch[:, 3].reshape(-1, 1), (_y.reshape(-1, 1) + 1) * goal_batch[:, 0].reshape(-1, 1)], 1))
                     current_step = tf.train.global_step(sess, global_step)
@@ -65,11 +66,13 @@ def main(_):
                     # MSE_loss_on_test_data =
                     # if epoch % 10 == 0 or MSE_loss_on_test_data < minimum_MSE_loss:
                     if epoch % 10 == 0:
-                        print('The current model is being stored.')
+                        time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        print('%s - The current model is being stored.' % time_string)
                         path = saver.save(sess, os.path.join(config.model_params_dir, FLAGS.model_name, epoch))
-                        print('The current model has been stored to ' + path)
+                        print('%s - The current model has been stored to ' % time_string + path)
             path = saver.save(sess, os.path.join(config.model_params_dir, FLAGS.model_name, 'final'))
-            print('The lasted model has been stored to ' + path)
+            time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print('%s - The lasted model has been stored to ' % time_string + path)
 
 
 if __name__ == "__main__":
