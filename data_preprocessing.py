@@ -70,10 +70,11 @@ def generate_data(tsv_file, remains=True, save_as_file=True):
             day_grained_8_days_data = np.concatenate([day_grained_8_days_data, day_growth_rate_vector], 1)
             hour_grained_data = np.array(hour_grained_dataframe.iloc[i - 25: i].values[:, 1:], dtype='float64')
             hour_growth_rate_vector = (hour_grained_data[:, 1] / hour_grained_data[0, 1] - 1).reshape(-1, 1)
+            is_today_vector = np.concatenate([np.zeros(1 + (24 - i % 24)), np.ones(i % 24)]).reshape(-1, 1)
             data.append([hour_grained_dataframe.iloc[i].values[0],
                         day_grained_8_days_data[:-1],
                         day_grained_8_days_data[-1, :-1],
-                        np.concatenate([hour_grained_data, hour_growth_rate_vector], 1)[1:],
+                        np.concatenate([hour_grained_data, hour_growth_rate_vector, is_today_vector], 1)[1:],
                         day_grained_8_days_data[-1, -1],
                         np.array([day_grained_8_days_data[0, 4],
                                   hour_grained_dataframe.iloc[i - (i % 24):i]['count'].sum(),

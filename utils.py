@@ -13,6 +13,8 @@ def generate_feed_dict(data_batch, model, keep_prob):
     prediction_day_is_weekend_weekday_batch = []
     hour_per_day_batch = []
     impression_per_hour_batch = []
+    if hasattr(model, 'is_today'):
+        is_today_batch = []
     Y_batch = []
     goal_batch = []
     for record in data_batch:
@@ -27,6 +29,8 @@ def generate_feed_dict(data_batch, model, keep_prob):
         prediction_day_is_weekend_weekday_batch.append(record[2][3])
         hour_per_day_batch.append(record[3][:, 0])
         impression_per_hour_batch.append(record[3][:, 2])
+        if hasattr(model, 'is_today'):
+            is_today_batch.append(record[3][:, 3])
         Y_batch.append(record[4])
         goal_batch.append(record[5])
     day_of_week_batch = np.array(day_of_week_batch, dtype='int32')
@@ -43,6 +47,8 @@ def generate_feed_dict(data_batch, model, keep_prob):
         [-1, 1])
     hour_per_day_batch = np.array(hour_per_day_batch, dtype='int32')
     impression_per_hour_batch = np.array(impression_per_hour_batch, dtype='float64').reshape([-1, 24, 1])
+    if hasattr(model, 'is_today'):
+        is_today_batch = np.array(is_today_batch, dtype='float64').reshape([-1, 24, 1])
     Y_batch = np.array(Y_batch, dtype='float64').reshape([-1, 1])
     goal_batch = np.array(goal_batch, dtype='float64').reshape([-1, 4])
     feed_dict = dict()
@@ -57,6 +63,8 @@ def generate_feed_dict(data_batch, model, keep_prob):
     feed_dict[model.prediction_day_is_weekend_weekday] = prediction_day_is_weekend_weekday_batch
     feed_dict[model.hour_per_day] = hour_per_day_batch
     feed_dict[model.impression_per_hour] = impression_per_hour_batch
+    if hasattr(model, 'is_today'):
+        feed_dict[model.is_today] = is_today_batch
     feed_dict[model.Y] = Y_batch
     feed_dict[model.actual_batch_size_scalar] = [Y_batch.shape[0]]
     feed_dict[model.keep_prob] = keep_prob
