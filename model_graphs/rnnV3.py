@@ -80,7 +80,7 @@ class Model:
                                                           dtype='float64')
             self.is_today_embedding = tf.get_variable(name='is_today_day_embedding',
                                                       shape=[model_settings.is_today_size,
-                                                             model_settings.is_today_day_embedding_size],
+                                                             model_settings.is_today_embedding_size],
                                                       dtype='float64')
             self.hour_grained_inputs = tf.concat(
                 values=[

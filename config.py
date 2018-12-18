@@ -3,7 +3,7 @@ import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_bool('remains', True, 'predict remains of one day or full day')
-tf.app.flags.DEFINE_string('model_name', 'rnnV2', 'model name')
+tf.app.flags.DEFINE_string('model_name', 'rnnV3', 'model name')
 tf.app.flags.DEFINE_integer('city_id', 1, 'city id')
 tf.app.flags.DEFINE_string('train_start_date', '2018-03-19', 'train start date')
 tf.app.flags.DEFINE_string('train_end_date', '2018-08-16', 'train end date')
