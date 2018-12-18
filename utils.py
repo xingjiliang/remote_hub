@@ -48,7 +48,7 @@ def generate_feed_dict(data_batch, model, keep_prob):
     hour_per_day_batch = np.array(hour_per_day_batch, dtype='int32')
     impression_per_hour_batch = np.array(impression_per_hour_batch, dtype='float64').reshape([-1, 24, 1])
     if hasattr(model, 'is_today'):
-        is_today_batch = np.array(is_today_batch, dtype='float64').reshape([-1, 24, 1])
+        is_today_batch = np.array(is_today_batch, dtype='int32')
     Y_batch = np.array(Y_batch, dtype='float64').reshape([-1, 1])
     goal_batch = np.array(goal_batch, dtype='float64').reshape([-1, 4])
     feed_dict = dict()

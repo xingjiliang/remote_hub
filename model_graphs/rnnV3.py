@@ -70,7 +70,8 @@ class Model:
                                                       model_settings.hour_grained_sequence_length],
                                                name='hour_per_day')
             self.is_today = tf.placeholder(dtype=tf.int32,
-                                           shape=[None, model_settings.hour_grained_sequence_length],
+                                           shape=[None,
+                                                  model_settings.hour_grained_sequence_length],
                                            name='is_today')
             self.impression_per_hour = tf.placeholder(dtype=tf.float64, shape=[None, model_settings.hour_grained_sequence_length, 1], name='impression_per_hour')
 
