@@ -43,6 +43,7 @@ def main(_):
             end_time = datetime.datetime.now()
             y_true = goal[:, 3].reshape(-1, 1)
             y_pred = goal[:, 0].reshape(-1, 1) * _y + goal[:, 1].reshape(-1, 1)
+            print(np.concatenate([y_true, y_pred], 1))
             mse = metrics.mean_squared_error(y_true, y_pred)
             mae = metrics.mean_absolute_error(y_true, y_pred)
             mape = (abs(y_true - y_pred) / y_true).mean()
