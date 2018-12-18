@@ -24,8 +24,8 @@ class Model:
     def __init__(self, is_training=False):
         model_settings = ModelSettings()
         self.keep_prob = tf.placeholder(dtype=tf.float64, name='keep_prob')
-        self.actual_batch_size = tf.placeholder(dtype=tf.int32, name='actual_batch_size_scalar')
-        # actual_batch_size = self.actual_batch_size_scalar[0]
+        self.actual_batch_size_scalar = tf.placeholder(dtype=tf.int32, shape=[1], name='actual_batch_size_scalar')
+        actual_batch_size = self.actual_batch_size_scalar[0]
 
         with tf.variable_scope("day_grained_processing_frame"):
             self.day_of_week = tf.placeholder(dtype=tf.int32, shape=[None, model_settings.day_grained_sequence_length], name='day_of_week')
@@ -52,7 +52,7 @@ class Model:
             day_grained_forward_lstm_cell = tf.nn.rnn_cell.LSTMCell(model_settings.day_grained_cell_size, use_peepholes=False, state_is_tuple=True)
             if is_training:
                 day_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(day_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
-            day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
+            day_grained_initial_state_forward = day_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 self.day_grained_outputs, self.day_grained_outputs_state = tf.nn.dynamic_rnn(day_grained_forward_lstm_cell,
                                                                                              self.day_grained_inputs,
@@ -80,8 +80,8 @@ class Model:
             if is_training:
                 hour_grained_forward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_forward_lstm_cell, input_keep_prob=self.keep_prob)
                 # hour_grained_backward_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(hour_grained_backward_lstm_cell, input_keep_prob=model_settings.keep_prob)
-            hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
-            # self.hour_grained_initial_state_backward = hour_grained_backward_lstm_cell.zero_state(self.actual_batch_size, tf.float64)
+            hour_grained_initial_state_forward = hour_grained_forward_lstm_cell.zero_state(actual_batch_size, tf.float64)
+            # self.hour_grained_initial_state_backward = hour_grained_backward_lstm_cell.zero_state(actual_batch_size, tf.float64)
             with tf.variable_scope('LSTM_LAYER'):
                 self.hour_grained_outputs, self.hour_grained_outputs_state = tf.nn.dynamic_rnn(hour_grained_forward_lstm_cell,
                                                                                      self.hour_grained_inputs,
