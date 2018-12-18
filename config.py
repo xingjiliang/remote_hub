@@ -23,6 +23,7 @@ origin_dataset_dir = "origin_dataset"
 dataset_dir = "dataset"
 model_graph_dir = "model_graphs"
 model_params_dir = "models"
+result_dir = "results"
 dateset_start_date = '2017-03-03'
 
 holidays = [
