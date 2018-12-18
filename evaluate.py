@@ -42,7 +42,7 @@ def main(_):
                 goal = np.concatenate([goal, goal_batch], 0) if goal is not None else goal_batch
             end_time = datetime.datetime.now()
             y_true = goal[:, 3].reshape(-1, 1)
-            y_pred = (_y.reshape(-1, 1) + 1) * goal_batch[:, 0].reshape(-1, 1) + goal_batch[:, 1].reshape(-1, 1)
+            y_pred = (_y.reshape(-1, 1) + 1) * goal[:, 0].reshape(-1, 1) + goal[:, 1].reshape(-1, 1)
             np.save(os.path.join(config.result_dir, FLAGS.model_name + '.npy'), np.concatenate([y_true, y_pred], 1))
             mse = metrics.mean_squared_error(y_true, y_pred)
             mae = metrics.mean_absolute_error(y_true, y_pred)
