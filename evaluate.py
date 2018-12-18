@@ -1,4 +1,5 @@
 import os
+import importlib
 import numpy as np
 import tensorflow as tf
 import datetime
@@ -6,12 +7,12 @@ from sklearn import metrics
 
 import config
 import utils
-from model_graphs import rnnV2 as model
 
 FLAGS = tf.app.flags.FLAGS
 
 
 def main(_):
+    model = importlib.import_module(config.model_graph_dir + '.' + FLAGS.model_name)
     test_data_file_path = os.path.join(config.dataset_dir, "%d_test_data_%s_%s.npy" % (FLAGS.city_id, FLAGS.test_start_date, FLAGS.test_end_date))
     test_data = np.load(test_data_file_path)
     with tf.Graph().as_default():
