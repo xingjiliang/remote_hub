@@ -36,6 +36,7 @@ def main(_):
                 test_data_batch = test_data[i * FLAGS.test_data_batch_size:(i + 1) * FLAGS.test_data_batch_size]
                 feed_dict, goal_batch = utils.generate_feed_dict(test_data_batch, m, 1.0)
                 model_mse_loss_batch, y_batch, _y_batch = sess.run([m.final_loss, m.Y, m._Y], feed_dict=feed_dict)
+                print(model_mse_loss_batch)
                 model_mse_loss = np.concatenate([model_mse_loss, model_mse_loss_batch], 0) if model_mse_loss is not None else model_mse_loss_batch
                 y = np.concatenate([y, y_batch], 0) if y is not None else y_batch
                 _y = np.concatenate([_y, _y_batch], 0) if _y is not None else _y_batch
