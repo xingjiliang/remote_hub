@@ -60,7 +60,7 @@ def main(_):
                     if step % 100 == 0:
                         info = "{} - epoch {}, final_loss {:g}.".format(time_string, epoch, final_loss)
                         print(info)
-                        print(np.concatenate([goal_batch[:, 3].reshape(-1, 1), (_y.reshape(-1, 1) + 1) * goal_batch[:, 0].reshape(-1, 1)], 1))
+                        print(np.concatenate([goal_batch[:, 3].reshape(-1, 1), (_y.reshape(-1, 1) + 1) * goal_batch[:, 0].reshape(-1, 1) + goal_batch[:, 1].reshape(-1, 1)], 1))
                     current_step = tf.train.global_step(sess, global_step)
                 if epoch > 10:
                     # MSE_loss_on_test_data =
