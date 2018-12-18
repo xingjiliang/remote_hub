@@ -58,6 +58,6 @@ def generate_feed_dict(data_batch, model, keep_prob):
     feed_dict[model.hour_per_day] = hour_per_day_batch
     feed_dict[model.impression_per_hour] = impression_per_hour_batch
     feed_dict[model.Y] = Y_batch
-    feed_dict[model.actual_batch_size_scalar] = Y_batch.shape[0]
+    feed_dict[model.self.actual_batch_size] = Y_batch.shape[0]
     feed_dict[model.keep_prob] = keep_prob
     return feed_dict, goal_batch
