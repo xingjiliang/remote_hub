@@ -29,7 +29,7 @@ def main(_):
             saver = tf.train.Saver(max_to_keep=None)
             if FLAGS.previous_model_epoch_times:
                 saver.restore(sess,
-                              os.path.join(config.model_params_dir, FLAGS.model_name, FLAGS.previous_model_epoch_times))
+                              os.path.join(config.model_params_dir, FLAGS.model_name, str(FLAGS.previous_model_epoch_times)))
             else:
                 sess.run(tf.global_variables_initializer())
 
@@ -68,7 +68,7 @@ def main(_):
                     if epoch % 10 == 0:
                         time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         print('%s - The current model is being stored.' % time_string)
-                        path = saver.save(sess, os.path.join(config.model_params_dir, FLAGS.model_name, epoch))
+                        path = saver.save(sess, os.path.join(config.model_params_dir, FLAGS.model_name, str(epoch)))
                         print('%s - The current model has been stored to ' % time_string + path)
             path = saver.save(sess, os.path.join(config.model_params_dir, FLAGS.model_name, 'final'))
             time_string = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

@@ -1,8 +1,6 @@
 import tensorflow as tf
 
 
-# 前提，当修改了一个模型的结构，之前模型的参数就没用了
-# 最科学的做法是将ModelSettings改为ModelConfig，即一个Model有其固定的结构
 class ModelSettings:
     day_grained_sequence_length = 7
     day_grained_cell_size = 30
