@@ -27,7 +27,7 @@ def main(_):
             else:
                 saver.restore(sess,
                               os.path.join(config.model_params_dir, FLAGS.model_name, 'final'))
-            model_mse_loss = None
+            model_mse_loss = 0
             y = None
             _y = None
             goal = None
@@ -35,9 +35,8 @@ def main(_):
             for i in range(int(len(test_data) / float(FLAGS.test_data_batch_size)) + 1):
                 test_data_batch = test_data[i * FLAGS.test_data_batch_size:(i + 1) * FLAGS.test_data_batch_size]
                 feed_dict, goal_batch = utils.generate_feed_dict(test_data_batch, m, 1.0)
-                model_mse_loss_batch, y_batch, _y_batch = sess.run([m.final_loss, m.Y, m._Y], feed_dict=feed_dict)
-                print(model_mse_loss_batch)
-                model_mse_loss = np.concatenate([model_mse_loss, model_mse_loss_batch], 0) if model_mse_loss is not None else model_mse_loss_batch
+                batch_model_mse_loss, y_batch, _y_batch = sess.run([m.final_loss, m.Y, m._Y], feed_dict=feed_dict)
+                model_mse_loss = model_mse_loss + batch_model_mse_loss
                 y = np.concatenate([y, y_batch], 0) if y is not None else y_batch
                 _y = np.concatenate([_y, _y_batch], 0) if _y is not None else _y_batch
                 goal = np.concatenate([goal, goal_batch], 0) if goal is not None else goal_batch
